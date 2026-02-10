@@ -56,6 +56,60 @@ model = None
 
 # 2. Core Functions Implementation
 # A. Startup & RAG Initialization
+import asyncio
+
+PDF_LOADING_STATUS = "pending"
+
+async def load_pdf_background():
+    global TEXTBOOK_CONTENT, PDF_LOADING_STATUS
+    PDF_LOADING_STATUS = "loading"
+    try:
+        # Re-verify DB connection inside task if needed, or rely on global 'db'
+        if not db:
+             logger.error("DB not initialized in background task")
+             PDF_LOADING_STATUS = "failed_no_db"
+             return
+
+        doc_ref = db.collection("content").document("textbook_v1")
+        doc = doc_ref.get()
+        if doc.exists:
+            data = doc.to_dict()
+            pdf_url = data.get("pdf_drive_link")
+            
+            if not os.path.exists(LOCAL_PDF_PATH) and pdf_url:
+                download_url = convert_gdrive_url(pdf_url)
+                logger.info(f"Downloading PDF from {download_url}...")
+                response = await asyncio.to_thread(requests.get, download_url)
+                if response.status_code == 200:
+                    with open(LOCAL_PDF_PATH, "wb") as f:
+                        f.write(response.content)
+                    logger.info("PDF Downloaded.")
+                else:
+                    logger.error(f"Failed to download PDF: {response.status_code}")
+                    PDF_LOADING_STATUS = "failed_download"
+                    return
+            
+            if os.path.exists(LOCAL_PDF_PATH):
+                logger.info("Extracting text from PDF...")
+                def extract_text():
+                    reader = PdfReader(LOCAL_PDF_PATH)
+                    content = {}
+                    for i, page in enumerate(reader.pages):
+                        text = page.extract_text()
+                        if text:
+                            content[i + 1] = text
+                    return content
+
+                TEXTBOOK_CONTENT = await asyncio.to_thread(extract_text)
+                logger.info(f"Extracted {len(TEXTBOOK_CONTENT)} pages.")
+                PDF_LOADING_STATUS = "completed"
+        else:
+            logger.warning("textbook_v1 document not found in Firestore.")
+            PDF_LOADING_STATUS = "not_found"
+    except Exception as e:
+        logger.error(f"Background PDF Sync Failed: {e}")
+        PDF_LOADING_STATUS = f"failed_error: {str(e)}"
+
 @app.on_event("startup")
 async def startup_event():
     global db, model, TEXTBOOK_CONTENT
@@ -93,44 +147,8 @@ async def startup_event():
     else:
         logger.warning("GOOGLE_API_KEY not set.")
 
-    # Download & Process PDF
-    if db:
-        try:
-            doc_ref = db.collection("content").document("textbook_v1")
-            doc = doc_ref.get()
-            if doc.exists:
-                data = doc.to_dict()
-                pdf_url = data.get("pdf_drive_link")
-                
-                # Logic to download. 
-                # Note: Google Drive links usually need transformation to direct download links
-                # For this demo, we assume a direct link or handle standard GDrive export links
-                # If local file exists, maybe skip download to save time in dev
-                if not os.path.exists(LOCAL_PDF_PATH) and pdf_url:
-                    download_url = convert_gdrive_url(pdf_url)
-                    logger.info(f"Downloading PDF from {download_url}...")
-                    response = requests.get(download_url)
-                    if response.status_code == 200:
-                        with open(LOCAL_PDF_PATH, "wb") as f:
-                            f.write(response.content)
-                        logger.info("PDF Downloaded.")
-                    else:
-                        logger.error(f"Failed to download PDF: {response.status_code}")
-                
-                # Load PDF Content for RAG
-                if os.path.exists(LOCAL_PDF_PATH):
-                    print("Extracting text from PDF...")
-                    reader = PdfReader(LOCAL_PDF_PATH)
-                    for i, page in enumerate(reader.pages):
-                        text = page.extract_text()
-                        if text:
-                            # 1-based index
-                            TEXTBOOK_CONTENT[i + 1] = text
-                    print(f"Extracted {len(TEXTBOOK_CONTENT)} pages.")
-            else:
-                print("textbook_v1 document not found in Firestore.")
-        except Exception as e:
-            print(f"Startup Data Sync Failed: {e}")
+    # Start PDF loading in background
+    asyncio.create_task(load_pdf_background())
 
 # B. Adaptive Logic
 def get_system_prompt(uid: str) -> str:
