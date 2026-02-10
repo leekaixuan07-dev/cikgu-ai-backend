@@ -1,8 +1,8 @@
-fastapi
-uvicorn
-firebase-admin
-google-generativeai
-pypdf
-python-multipart
-requests
-python-dotenv
+fastapi==0.115.8
+uvicorn==0.40.0
+firebase-admin==6.6.0
+google-generativeai==0.8.4
+pypdf==6.6.2
+python-multipart==0.0.22
+requests==2.32.5
+python-dotenv==1.2.1
