@@ -13,6 +13,7 @@ from typing import List, Dict
 import logging
 from dotenv import load_dotenv
 import re
+import json
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
