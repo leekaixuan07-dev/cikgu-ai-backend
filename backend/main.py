@@ -48,6 +48,8 @@ GEMINI_API_KEY = os.environ.get("GOOGLE_API_KEY")
 
 LOCAL_PDF_PATH = "server_textbook.pdf"
 TEXTBOOK_CONTENT = {} # Cache for RAG: {page_num: text} 
+db = None
+model = None 
 # ...
 
 # ...
