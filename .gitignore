@@ -1,0 +1,34 @@
+# Environment Variables
+.env
+backend/.env
+
+# Python
+__pycache__/
+*.py[cod]
+venv/
+.venv/
+backend/venv/
+
+# Flutter / Dart
+.dart_tool/
+.packages
+.pub/
+build/
+coverage/
+frontend/build/
+frontend/.dart_tool/
+frontend/.pub/
+frontend/android/
+frontend/ios/
+frontend/macos/
+frontend/linux/
+frontend/windows/
+frontend/web/
+
+# IDEs
+.idea/
+.vscode/
+
+# Firebase
+backend/serviceAccountKey.json
+firebase-debug.log
