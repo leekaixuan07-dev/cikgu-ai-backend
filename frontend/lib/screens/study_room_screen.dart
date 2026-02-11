@@ -76,6 +76,7 @@ class _StudyRoomScreenState extends State<StudyRoomScreen> {
         body: jsonEncode({
           "uid": "test_user_uid", // Replace with actual Auth logic
           "message": userMsg,
+          "current_chapter_name": widget.chapterTitle,
           "context": "Page ${widget.pageNumber} content...", // Add mechanism to fetch page text if possible
           "history": _messages.map((m) => {
             "role": m['role'] == 'user' ? 'user' : 'model',

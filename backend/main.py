@@ -192,8 +192,36 @@ def get_relevant_context(query: str, chapter_name: Optional[str] = None) -> str:
     keywords = [k.lower() for k in query.split() if len(k) > 3]
     
     hits = []
+    
+    # Simple Chapter Mapping (In real app, fetch from DB)
+    chapter_starts = {}
+    # Scan content for chapter titles to build dynamic map if not available
+    # Or just use the default fallback if DB invalid
+    default_chapters = {
+         "Bab 1: Warisan Negara Bangsa": 1,
+         "Bab 2: Kebangkitan Nasionalisme": 22,
+         "Bab 3: Konflik Dunia": 50 # Approximate
+    }
+    
+    target_page = 0
+    if chapter_name:
+        # Try to find start page from default map or DB
+        for title, start_page in default_chapters.items():
+            if title in chapter_name or chapter_name in title:
+                target_page = start_page
+                break
+    
     for page_num, text in TEXTBOOK_CONTENT.items():
         score = sum(text.lower().count(k) for k in keywords)
+        
+        # Boost if page is within likely chapter range
+        if target_page > 0 and bucket_page(page_num, target_page):
+             score += 5 # Boost chapter pages
+             
+        # Boost if page contains chapter title explicitly
+        if chapter_name and chapter_name.lower() in text.lower():
+             score += 10
+             
         if score > 0:
             hits.append((score, page_num, text))
     
@@ -203,6 +231,10 @@ def get_relevant_context(query: str, chapter_name: Optional[str] = None) -> str:
     # Take top 3 pages
     top_hits = hits[:3]
     return "\n---\n".join([f"Page {h[1]}: {h[2]}" for h in top_hits])
+
+def bucket_page(page, start):
+    # Assume chapter length ~20 pages
+    return start <= page < start + 20
 
 # 3. API Endpoints Specification
 
