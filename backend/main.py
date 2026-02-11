@@ -266,11 +266,19 @@ def chat(request: ChatRequest):
     context_text = get_relevant_context(request.message, request.current_chapter_name)
     
     # 3. Generate
+    history_text = ""
+    for msg in request.history:
+        role_label = "USER" if msg.role == "user" else "CIKGU"
+        history_text += f"{role_label}: {msg.content}\n"
+
     full_prompt = f"""
     SYSTEM: {system_prompt}
     
     CONTEXT FROM TEXTBOOK:
     {context_text}
+    
+    CHAT HISTORY:
+    {history_text}
     
     USER QUESTION: {request.message}
     """

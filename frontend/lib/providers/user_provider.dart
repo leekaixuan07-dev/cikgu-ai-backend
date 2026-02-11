@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
+import '../constants.dart';
 
 class UserProvider extends ChangeNotifier {
   // Backend URL (10.0.2.2 for Android, localhost for Web/iOS)
   // Since we are targeting Web specifically as per request:
-  final String _backendUrl = "http://127.0.0.1:8000";
+  final String _backendUrl = kBackendUrl;
   
   String? _uid;
   String? _email;

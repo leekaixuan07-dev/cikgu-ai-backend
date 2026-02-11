@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:html' as html; // For IFrame
 import 'dart:ui' as ui; // For platform view registry
+import '../constants.dart';
 
 class StudyRoomScreen extends StatefulWidget {
   final String chapterTitle;
@@ -70,13 +71,16 @@ class _StudyRoomScreenState extends State<StudyRoomScreen> {
     try {
       // Call Backend
       final response = await http.post(
-        Uri.parse('http://127.0.0.1:8000/chat'),
+        Uri.parse('$kBackendUrl/chat'),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "uid": "test_user_uid", // Replace with actual Auth logic
           "message": userMsg,
           "context": "Page ${widget.pageNumber} content...", // Add mechanism to fetch page text if possible
-          "history": [] 
+          "history": _messages.map((m) => {
+            "role": m['role'] == 'user' ? 'user' : 'model',
+            "content": m['content']
+          }).toList() 
         }),
       );
 
