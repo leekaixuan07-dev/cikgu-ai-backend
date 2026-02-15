@@ -178,7 +178,8 @@ def get_system_prompt(uid: str) -> str:
     else:
         return (
             "You are CikguAI. Explain concepts formally and strictly based on the syllabus. "
-            "Be encouraging but academic."
+            "Be encouraging but academic. "
+            "DEFAULT LANGUAGE: Bahasa Melayu. Only use English if the user asks in English."
         )
 
 def get_relevant_context(query: str, chapter_name: Optional[str] = None) -> str:
@@ -189,7 +190,8 @@ def get_relevant_context(query: str, chapter_name: Optional[str] = None) -> str:
     """
     relevant_text = []
     # Split query into keywords
-    keywords = [k.lower() for k in query.split() if len(k) > 3]
+    # Allow short keywords if they are numbers or subtopics (e.g. "2.1")
+    keywords = [k.lower() for k in query.split() if len(k) > 3 or any(char.isdigit() for char in k)]
     
     hits = []
     
