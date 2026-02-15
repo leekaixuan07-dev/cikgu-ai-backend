@@ -44,16 +44,23 @@ app.add_middleware(
 )
 
 # Configuration
-SERVICE_ACCOUNT_KEY = "backend/serviceAccountKey.json"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+STATIC_DIR = os.path.join(BASE_DIR, "static")
+os.makedirs(STATIC_DIR, exist_ok=True)
+
+SERVICE_ACCOUNT_KEY = os.path.join(BASE_DIR, "serviceAccountKey.json")
 GEMINI_API_KEY = os.environ.get("GOOGLE_API_KEY") 
 
-LOCAL_PDF_PATH = "server_textbook.pdf"
+LOCAL_PDF_PATH = os.path.join(STATIC_DIR, "server_textbook.pdf")
 TEXTBOOK_CONTENT = {} # Cache for RAG: {page_num: text} 
 db = None
 model = None 
 # ...
 
-# ...
+from fastapi.staticfiles import StaticFiles
+
+# Mount static files to serve the PDF
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 # 2. Core Functions Implementation
 # A. Startup & RAG Initialization
@@ -265,7 +272,8 @@ def get_chapters(request: Request):
          
     # In production (Render), this will be the https URL
     # locally, http://localhost:8000
-    pdf_link = f"{base_url}/static/{LOCAL_PDF_PATH}"
+    pdf_filename = os.path.basename(LOCAL_PDF_PATH)
+    pdf_link = f"{base_url}/static/{pdf_filename}"
 
     doc = db.collection("content").document("textbook_v1").get()
     if doc.exists:
