@@ -113,6 +113,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 builder: (context) => StudyScreen(
                                     chapterTitle: chapter['title'],
                                     pdfUrl: _pdfLink,
+                                    pageNumber: chapter['page'],
                                 )
                             )
                         );

@@ -10,11 +10,13 @@ import '../providers/user_provider.dart';
 class StudyScreen extends StatefulWidget {
   final String chapterTitle;
   final String pdfUrl;
+  final int pageNumber;
 
   const StudyScreen({
     super.key,
     required this.chapterTitle,
     required this.pdfUrl,
+    required this.pageNumber,
   });
 
   @override
@@ -37,7 +39,7 @@ class _StudyScreenState extends State<StudyScreen> {
     ui_web.platformViewRegistry.registerViewFactory(
       viewId,
       (int viewId) => html.IFrameElement()
-        ..src = '${widget.pdfUrl}#page=${widget.pageNumber}'
+        ..src = '${widget.pdfUrl}#page=${widget.pageNumber + 2}'
         ..style.border = 'none'
         ..style.height = '100%'
         ..style.width = '100%'

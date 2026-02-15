@@ -319,6 +319,10 @@ def chat(request: ChatRequest):
     SUBJECT: Sejarah Tingkatan 4 (KSSM)
     
     CURRENT CHAPTER: {request.current_chapter_name}
+    IMPORTANT: You are an expert tutor for this specific chapter. 
+    1. EXPLAIN ONLY what is in the provided context for this chapter.
+    2. IF the user asks about the chapter title, USE THE EXACT TITLE provided above ({request.current_chapter_name}).
+    3. SUBCONTEXT: If the text provided is insufficient, acknowledge it, but do NOT invent a different chapter title.
     
     CONTEXT FROM TEXTBOOK:
     {context_text}
