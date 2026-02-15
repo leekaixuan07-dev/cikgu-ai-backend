@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Request
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 import firebase_admin
@@ -264,17 +264,28 @@ def auth_login(request: LoginRequest):
         # Update login info if needed
         return {"status": "success", "message": "User exists"}
 
+from fastapi.staticfiles import StaticFiles
+
+# Mount static files to serve the PDF
+app.mount("/static", StaticFiles(directory="."), name="static")
+
 @app.get("/chapters")
-def get_chapters():
+def get_chapters(request: Request):
     if not db:
         raise HTTPException(status_code=503, detail="Database unavailable")
     
+    # Construct local URL for PDF
+    base_url = str(request.base_url).rstrip("/")
+    # In production (Render), this will be the https URL
+    # locally, http://localhost:8000
+    pdf_link = f"{base_url}/static/{LOCAL_PDF_PATH}"
+
     doc = db.collection("content").document("textbook_v1").get()
     if doc.exists:
         data = doc.to_dict()
         return {
             "chapters": data.get("chapters", {}),
-            "pdf_drive_link": data.get("pdf_drive_link", "")
+            "pdf_drive_link": pdf_link # Return local static link instead of GDrive
         }
     else:
         # Return fallback/demo data if DB empty
@@ -283,7 +294,7 @@ def get_chapters():
                 "Bab 1: Warisan Negara Bangsa": 1,
                 "Bab 2: Kebangkitan Nasionalisme": 22
             },
-            "pdf_drive_link": ""
+            "pdf_drive_link": pdf_link
         }
 
 @app.post("/chat")
@@ -305,6 +316,7 @@ def chat(request: ChatRequest):
 
     full_prompt = f"""
     SYSTEM: {system_prompt}
+    SUBJECT: Sejarah Tingkatan 4 (KSSM)
     
     CURRENT CHAPTER: {request.current_chapter_name}
     
@@ -340,6 +352,7 @@ def quiz_generate(request: QuizGenerationRequest):
     context_text = get_relevant_context(request.chapter_name)
     
     prompt = f"""
+    SUBJECT: Sejarah Tingkatan 4 (KSSM)
     Generate 3 Multiple Choice Questions (MCQ) based on this text:
     "{context_text[:2000]}..." 
     
