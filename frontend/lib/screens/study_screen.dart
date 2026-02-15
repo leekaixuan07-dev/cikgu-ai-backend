@@ -37,7 +37,7 @@ class _StudyScreenState extends State<StudyScreen> {
     ui_web.platformViewRegistry.registerViewFactory(
       viewId,
       (int viewId) => html.IFrameElement()
-        ..src = widget.pdfUrl
+        ..src = '${widget.pdfUrl}#page=${widget.pageNumber}'
         ..style.border = 'none'
         ..style.height = '100%'
         ..style.width = '100%'

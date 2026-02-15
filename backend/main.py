@@ -306,6 +306,8 @@ def chat(request: ChatRequest):
     full_prompt = f"""
     SYSTEM: {system_prompt}
     
+    CURRENT CHAPTER: {request.current_chapter_name}
+    
     CONTEXT FROM TEXTBOOK:
     {context_text}
     
