@@ -172,15 +172,15 @@ def get_system_prompt(uid: str) -> str:
     if mode == LearningMode.REMEDIAL:
         return (
             "You are a friendly senior student ('Abang'). The user is confused. "
-            "Explain using Manglish (Malaysian English). Use analogies involving Nasi Lemak, "
-            "Mamak stalls, Football, or KL Traffic. Example: 'Imagine gravity is like when you rush for free food...'"
+            "Explain using simple English. Use analogies involving Football, Food, or Traffic."
         )
     else:
         return (
             "You are CikguAI. Explain concepts formally and strictly based on the syllabus. "
             "Be encouraging but academic. "
-            "DEFAULT LANGUAGE: Bahasa Melayu. Only use English if the user asks in English."
+            "DEFAULT LANGUAGE: ENGLISH. Only use Malay if the user asks in Malay."
         )
+
 
 def get_relevant_context(query: str, chapter_name: Optional[str] = None) -> str:
     """
@@ -191,7 +191,20 @@ def get_relevant_context(query: str, chapter_name: Optional[str] = None) -> str:
     relevant_text = []
     # Split query into keywords
     # Allow short keywords if they are numbers or subtopics (e.g. "2.1")
-    keywords = [k.lower() for k in query.split() if len(k) > 3 or any(char.isdigit() for char in k)]
+    # Also handle cases where user types "2.1Maksud" (no space)
+    raw_keywords = query.split()
+    keywords = []
+    for k in raw_keywords:
+        k = k.lower()
+        if len(k) > 3 or any(char.isdigit() for char in k):
+            keywords.append(k)
+        
+        # Extra splitting for "2.1Maksud" -> "2.1", "maksud"
+        subparts = re.split(r'(\d+\.\d+)', k)
+        for part in subparts:
+            if part and part != k:
+                 if len(part) > 3 or any(char.isdigit() for char in part):
+                      keywords.append(part)
     
     hits = []
     
@@ -238,38 +251,7 @@ def bucket_page(page, start):
     # Assume chapter length ~20 pages
     return start <= page < start + 20
 
-# 3. API Endpoints Specification
-
-@app.get("/")
-def home():
-    return {"status": "CikguAI Backend Running"}
-
-@app.post("/auth/login")
-def auth_login(request: LoginRequest):
-    if not db:
-        raise HTTPException(status_code=503, detail="Database unavailable")
-    
-    user_ref = db.collection("users").document(request.uid)
-    doc = user_ref.get()
-    
-    if not doc.exists:
-        data = {
-            "uid": request.uid,
-            "email": request.email,
-            "name": request.name,
-            "learning_mode": LearningMode.STANDARD,
-            "quiz_history": []
-        }
-        user_ref.set(data)
-        return {"status": "success", "message": "User created"}
-    else:
-        # Update login info if needed
-        return {"status": "success", "message": "User exists"}
-
-from fastapi.staticfiles import StaticFiles
-
-# Mount static files to serve the PDF
-app.mount("/static", StaticFiles(directory="."), name="static")
+# ... (skip to get_chapters)
 
 @app.get("/chapters")
 def get_chapters(request: Request):
@@ -278,6 +260,9 @@ def get_chapters(request: Request):
     
     # Construct local URL for PDF
     base_url = str(request.base_url).rstrip("/")
+    if "rend" in base_url or "https" not in base_url and "localhost" not in base_url:
+         base_url = base_url.replace("http://", "https://")
+         
     # In production (Render), this will be the https URL
     # locally, http://localhost:8000
     pdf_link = f"{base_url}/static/{LOCAL_PDF_PATH}"
