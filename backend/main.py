@@ -68,6 +68,8 @@ import asyncio
 
 PDF_LOADING_STATUS = "pending"
 
+import gc
+
 async def load_pdf_background():
     global TEXTBOOK_CONTENT, PDF_LOADING_STATUS
     PDF_LOADING_STATUS = "loading"
@@ -87,29 +89,45 @@ async def load_pdf_background():
             if not os.path.exists(LOCAL_PDF_PATH) and pdf_url:
                 download_url = convert_gdrive_url(pdf_url)
                 logger.info(f"Downloading PDF from {download_url}...")
-                response = await asyncio.to_thread(requests.get, download_url)
-                if response.status_code == 200:
+                
+                # Stream download to avoid loading entire file into RAM
+                with requests.get(download_url, stream=True) as r:
+                    r.raise_for_status()
                     with open(LOCAL_PDF_PATH, "wb") as f:
-                        f.write(response.content)
-                    logger.info("PDF Downloaded.")
-                else:
-                    logger.error(f"Failed to download PDF: {response.status_code}")
-                    PDF_LOADING_STATUS = "failed_download"
-                    return
+                        for chunk in r.iter_content(chunk_size=8192):
+                            f.write(chunk)
+                
+                logger.info("PDF Downloaded.")
+                gc.collect() # Force cleanup after download
             
             if os.path.exists(LOCAL_PDF_PATH):
                 logger.info("Extracting text from PDF...")
                 def extract_text():
-                    reader = PdfReader(LOCAL_PDF_PATH)
+                    # Optimized extraction: 
+                    # 1. Open file and keep handle open only during extraction
+                    # 2. Process page by page
                     content = {}
-                    for i, page in enumerate(reader.pages):
-                        text = page.extract_text()
-                        if text:
-                            content[i + 1] = text
+                    try:
+                        reader = PdfReader(LOCAL_PDF_PATH)
+                        # Process 300 pages max to be safe? No, we need all.
+                        # But we can periodically GC if it's huge.
+                        for i, page in enumerate(reader.pages):
+                            text = page.extract_text()
+                            if text:
+                                content[i + 1] = text
+                                
+                            # Periodic GC every 50 pages
+                            if i % 50 == 0:
+                                gc.collect()
+                    except Exception as extraction_err:
+                        logger.error(f"Extraction Error: {extraction_err}")
+                        return {}
+                    
                     return content
 
                 TEXTBOOK_CONTENT = await asyncio.to_thread(extract_text)
                 logger.info(f"Extracted {len(TEXTBOOK_CONTENT)} pages.")
+                gc.collect() # Final cleanup
                 PDF_LOADING_STATUS = "completed"
         else:
             logger.warning("textbook_v1 document not found in Firestore.")
